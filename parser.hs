@@ -13,7 +13,7 @@ languageDef =
             Token.identStart    = letter,
             Token.identLetter   = (oneOf "+-?><[]/\\" <|> alphaNum),
             Token.reservedNames = ["if", "quote", "define", "lambda", 
-                                   "let", "else", "true", "false", "nil"],
+                                   "else", "true", "false", "nil"],
             Token.reservedOpNames = ["+", "-", "id", "null?",
                                       "/","*","cons","car","cdr", "or", "and"]}
 
@@ -38,7 +38,7 @@ parsePgrm :: Parser [Expr]
 parsePgrm = many1 parseExpr 
 
 parseExpr :: Parser Expr
-parseExpr = tryList [apply, ifExpr, defVal, defFun, value, var]
+parseExpr = tryList [quote, apply, ifExpr, def, value, var]
 
 apply :: Parser Expr
 apply = parens $ Apply <$> parseExpr <*> (many parseExpr)
@@ -46,15 +46,11 @@ apply = parens $ Apply <$> parseExpr <*> (many parseExpr)
 ifExpr :: Parser Expr
 ifExpr = parens $ If <$> (reserved "if" *> parseExpr) <*> parseExpr <*> parseExpr 
 
-defVal :: Parser Expr
-defVal = parens $ DefVal <$> (reserved "define" *> identifier) <*> value
+def :: Parser Expr
+def = parens $ Def <$> (reserved "define" *> identifier) <*> value
 
-defFun :: Parser Expr
-defFun = parens
-  $ do reserved "define"
-       (f:params) <- nameList
-       body <- many1 parseExpr
-       return $ DefFun f params body
+quote :: Parser Expr
+quote = parens $  Quote <$> (reserved "quote" *>  (value <|> parseExpr))
 
 value :: Parser Expr
 value = tryList [sym, int, bool, str, lamb, list, nil, var] 
@@ -64,7 +60,7 @@ value = tryList [sym, int, bool, str, lamb, list, nil, var]
         sym  = (char '\'') >> (Value . Symbol) <$> identifier
         str  = (Value . Str) <$> (char '\"'  >> (manyTill anyChar  (char '\"')))
         lamb = parens (Value <$> (Lambda <$> (reserved "lambda" *> nameList) <*> parseExpr))
-        list = (Value . List) <$> ((char '\'') *> parens (sepBy value whiteSpace))
+        list = (Value . List) <$> (parens (sepBy value whiteSpace))
         nil  = (Value Nil) <$ reserved "nil"
 
 var :: Parser Expr

@@ -16,8 +16,8 @@ data LispValue = Number Integer
 
 data Expr = Apply Expr [Expr]
           | If Expr Expr Expr
-          | DefVal Name Expr
-          | DefFun Name [Name] [Expr]
+          | Def Name Expr
+          | Quote Expr
           | Value LispValue
           | Var Name  
           deriving (Eq, Show)
@@ -25,12 +25,12 @@ data Expr = Apply Expr [Expr]
 
 
 instance Show LispValue where
-  show (Number x)      = show x
-  show (Boolean x)     = if x then "true" else "false"
-  show (Symbol x)      = show x
-  show (Str x)         = show x
+  show (Number x)      = "{Number " ++ show x ++ "}"
+  show (Boolean x)     = "{Boolean " ++ show x ++ "}"
+  show (Symbol x)      = "{Symbol " ++ show x ++ "}"
+  show (Str x)         = "{String " ++ show x ++ "}"
   show (Lambda _ _)    = "<procedure>" 
-  show (List x)        = "(" ++ (intercalate " " .  map show) x ++ ")"
+  show (List x)        = "{List (" ++ (intercalate " " .  map show) x ++ ")}"
   show Nil             = "nil"
 
 instance Eq LispValue where
