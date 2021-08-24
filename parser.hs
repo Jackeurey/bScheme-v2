@@ -12,10 +12,10 @@ languageDef =
             Token.commentEnd    = "-}",
             Token.identStart    = letter,
             Token.identLetter   = (oneOf "+-?><[]/\\" <|> alphaNum),
-            Token.reservedNames = ["if", "quote", "define", "lambda", 
+            Token.reservedNames = ["if", "define", "lambda", 
                                    "else", "true", "false", "nil"],
-            Token.reservedOpNames = ["+", "-", "id", "null?",
-                                      "/","*","cons","car","cdr", "or", "and"]}
+            Token.reservedOpNames = ["+", "-", "null?", "quote", "unquote", "quasiquote",
+                                      "eval", "apply", "/","*","cons","car","cdr", "or", "and"]}
 
 lexer      = Token.makeTokenParser languageDef -- Uses the languageDef to create a lexer
 identifier = Token.identifier lexer            -- parse identifier
@@ -38,7 +38,7 @@ parsePgrm :: Parser [Expr]
 parsePgrm = many1 parseExpr 
 
 parseExpr :: Parser Expr
-parseExpr = tryList [quote, apply, ifExpr, def, value, var]
+parseExpr = tryList [apply, ifExpr, def, var, value]
 
 apply :: Parser Expr
 apply = parens $ Apply <$> parseExpr <*> (many parseExpr)
@@ -49,19 +49,16 @@ ifExpr = parens $ If <$> (reserved "if" *> parseExpr) <*> parseExpr <*> parseExp
 def :: Parser Expr
 def = parens $ Def <$> (reserved "define" *> identifier) <*> value
 
-quote :: Parser Expr
-quote = parens $  Quote <$> (reserved "quote" *>  (value <|> parseExpr))
-
 value :: Parser Expr
-value = tryList [sym, int, bool, str, lamb, list, nil, var] 
-  where int  = (Value . Number) <$> integer
-        bool = (Value . Boolean) True <$ reserved "true" <|>
-               (Value . Boolean) False <$ reserved "false"
-        sym  = (char '\'') >> (Value . Symbol) <$> identifier
-        str  = (Value . Str) <$> (char '\"'  >> (manyTill anyChar  (char '\"')))
-        lamb = parens (Value <$> (Lambda <$> (reserved "lambda" *> nameList) <*> parseExpr))
-        list = (Value . List) <$> (parens (sepBy value whiteSpace))
-        nil  = (Value Nil) <$ reserved "nil"
+value = Value <$> tryList [sym, int, bool, str, lamb, list, nil]
+  where int  = Number <$> integer
+        bool = Boolean True <$ reserved "true" <|>
+               Boolean False <$ reserved "false"
+        sym  = Symbol <$> identifier
+        str  = Str <$> (char '\"'  >> (manyTill anyChar  (char '\"')))
+        lamb = parens (Lambda <$> (reserved "lambda" *> nameList) <*> parseExpr)
+        list = parens (List <$> (parens $ sepEndBy parseExpr whiteSpace))
+        nil  = Nil <$ reserved "nil"
 
 var :: Parser Expr
 var = Var <$> identifier

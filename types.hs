@@ -17,7 +17,6 @@ data LispValue = Number Integer
 data Expr = Apply Expr [Expr]
           | If Expr Expr Expr
           | Def Name Expr
-          | Quote Expr
           | Value LispValue
           | Var Name  
           deriving (Eq, Show)
